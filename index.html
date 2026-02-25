@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
+<script>
+// Force Blogger mobile users to full site
+if(window.location.hostname.indexOf('blogspot.com') > -1) {
+  var u = window.location.href;
+  if(u.indexOf('?m=1') > -1) window.location.replace(u.replace('?m=1','?m=0'));
+  if(u.indexOf('&m=1') > -1) window.location.replace(u.replace('&m=1','&m=0'));
+}
+</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>ShopBanglo – Premium Store</title>
@@ -1715,9 +1723,25 @@ function toggleWish(id, title) {
   renderAll();
 }
 
-// WA link
-function waLink(name) {
-  return `https://wa.me/8801826392408?text=${encodeURIComponent('আমি এই পণ্যটি অর্ডার করতে চাই: ' + name)}`;
+// Rich WhatsApp Order Message
+function waOrder(title, img, price) {
+  const userName = currentUser ? currentUser.name : 'Customer';
+  const userEmail = currentUser ? currentUser.email : '';
+
+  const msg =
+    '🛍️ *নতুন অর্ডার — ShopBanglo*\n' +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '📦 *পণ্যের নাম:*\n' +
+    title + '\n\n' +
+    '💰 *মূল্য:* ' + (price ? '৳' + price : 'দাম জানতে চাই') + '\n' +
+    '🖼️ *পণ্যের ছবি:*\n' +
+    img + '\n\n' +
+    '👤 *অর্ডারকারী:* ' + userName + '\n' +
+    (userEmail ? '📧 *Email:* ' + userEmail + '\n' : '') +
+    '━━━━━━━━━━━━━━━━━━━━\n' +
+    '✅ আমি এই পণ্যটি অর্ডার করতে চাই। দয়া করে যোগাযোগ করুন।';
+
+  return 'https://wa.me/8801826392408?text=' + encodeURIComponent(msg);
 }
 
 // Fetch posts via JSONP (bypasses CORS restrictions)
@@ -1802,7 +1826,7 @@ function renderAll(arr) {
             id="cartBtn_${p.id}">
             ${cartInCart(p.id) ? '✅ Added' : (currentUser ? '🛒 Cart-এ যোগ করুন' : '🔒 Login করুন')}
           </button>
-          <a class="btn-order" href="${waLink(p.title)}" target="_blank">
+          <a class="btn-order" href="${waOrder(p.title, p.img, parsePrice(p.content))}" target="_blank">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.113 1.524 5.843L.057 23.804a.5.5 0 0 0 .638.637l5.94-1.463A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.844a9.822 9.822 0 0 1-5.012-1.373l-.359-.214-3.726.979.994-3.633-.234-.374A9.845 9.845 0 0 1 2.156 12C2.156 6.565 6.565 2.156 12 2.156S21.844 6.565 21.844 12 17.435 21.844 12 21.844z"/></svg>
             অর্ডার
           </a>
@@ -1949,16 +1973,33 @@ function confirmClearCart() {
   }
 }
 
-// Checkout via WhatsApp
+// Checkout via WhatsApp (with full product details + images)
 function checkoutCart() {
   const cart = loadCart();
   if (!cart.length) return;
-  const lines = cart.map((item, i) =>
-    (i+1) + '. ' + item.title + (item.price ? ' (৳' + item.price + ')' : '')
-  ).join('\n');
+  const userName = currentUser ? currentUser.name : 'Customer';
+  const userEmail = currentUser ? currentUser.email : '';
   const total = cart.reduce((s, i) => s + (i.price||0), 0);
-  const msg = 'আমি নিচের পণ্যগুলো অর্ডার করতে চাই:\n\n' + lines + '\n\nমোট: ৳' + total +
-    '\n\nEmail: ' + (currentUser ? currentUser.email : '');
+
+  let msg = '🛒 *Cart অর্ডার — ShopBanglo*\n';
+  msg += '━━━━━━━━━━━━━━━━━━━━\n';
+  msg += '👤 *অর্ডারকারী:* ' + userName + '\n';
+  if(userEmail) msg += '📧 *Email:* ' + userEmail + '\n';
+  msg += '━━━━━━━━━━━━━━━━━━━━\n\n';
+
+  cart.forEach((item, i) => {
+    msg += '📦 *পণ্য ' + (i+1) + ':*\n';
+    msg += item.title + '\n';
+    msg += '💰 মূল্য: ' + (item.price ? '৳' + item.price : 'জানতে চাই') + '\n';
+    msg += '🖼️ ছবি: ' + item.img + '\n';
+    msg += '\n';
+  });
+
+  msg += '━━━━━━━━━━━━━━━━━━━━\n';
+  msg += '💵 *মোট মূল্য: ৳' + total.toLocaleString() + '*\n';
+  msg += '━━━━━━━━━━━━━━━━━━━━\n';
+  msg += '✅ আমি এই পণ্যগুলো অর্ডার করতে চাই। দয়া করে যোগাযোগ করুন।';
+
   window.open('https://wa.me/8801826392408?text=' + encodeURIComponent(msg), '_blank');
 }
 
